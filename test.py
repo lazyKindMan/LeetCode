@@ -2,6 +2,9 @@ import os.path
 import sys
 import unittest
 from importlib.util import spec_from_file_location, module_from_spec
+from dotenv import load_dotenv
+import constants
+from utils import get_default_folder
 
 # Question ID that wants to test, modify here as passing arguments
 QUESTION = "2908"
@@ -12,14 +15,19 @@ QUESTION = "2908"
 
 class Test(unittest.TestCase):
     def test(self):
-        self.assertTrue(os.path.exists(f"problems/{QUESTION}"), msg="Please set up the problem env first!")
+        print(f"Testing problem: {QUESTION}")
 
-        solution_spec = spec_from_file_location("module.name", f"./problems/{QUESTION}/solution.py")
+        load_dotenv()
+        problem_folder = os.getenv(constants.PROBLEM_FOLDER, get_default_folder())
+
+        self.assertTrue(os.path.exists(f"{problem_folder}/{QUESTION}"), msg="Please set up the problem env first!")
+
+        solution_spec = spec_from_file_location("module.name", f"./{problem_folder}/{QUESTION}/solution.py")
         solution = module_from_spec(solution_spec)
         solution_spec.loader.exec_module(solution)
         solution_obj = solution.Solution()
 
-        testcase_spec = spec_from_file_location("module.name", f"./problems/{QUESTION}/testcase.py")
+        testcase_spec = spec_from_file_location("module.name", f"./{problem_folder}/{QUESTION}/testcase.py")
         testcase = module_from_spec(testcase_spec)
         testcase_spec.loader.exec_module(testcase)
         testcase_obj = testcase.Testcase()
@@ -28,7 +36,10 @@ class Test(unittest.TestCase):
             i, o = test
             result = solution_obj.solve(test_input=i)
             try:
-                if o and isinstance(o, list) and (None not in o and (isinstance(o[0], list) and not any(None in x for x in o))):
+                if o and isinstance(o, list) and isinstance(o[0], float):
+                    for v1, v2 in zip(o, result):
+                        self.assertAlmostEqual(v1, v2, msg=f"input = {i}", delta=0.00001)
+                elif o and isinstance(o, list) and (None not in o and (isinstance(o[0], list) and not any(None in x for x in o))):
                     self.assertListEqual(sorted(o), sorted(result), msg=f"input = {i}")
                 else:
                     self.assertEqual(o, result, msg=f"input = {i}")
