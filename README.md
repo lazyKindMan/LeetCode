@@ -226,7 +226,7 @@ python3 ./test.py
 
 [783.Minimum Distance Between BST Nodes](problems/783/problem.md)
 
-[530.Minimum Absolute Difference in BST](problems/530/problem.md)
+[530.Minimum Absolute Difference in BST](longsq/530/problem.md)
 
 [1827.Minimum Operations to Make the Array Increasing](problems/1827/problem.md)
 
@@ -782,7 +782,7 @@ python3 ./test.py
 
 [1049.Last Stone Weight II](problems/1049/problem.md)
 
-[518.Coin Change 2](problems/518/problem.md)
+[518.Coin Change 2](longsq/518/problem.md)
 
 [279.Perfect Squares](problems/279/problem.md)
 

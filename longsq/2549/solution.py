@@ -1,5 +1,4 @@
 import solution
-from typing import *
 
 
 class Solution(solution.Solution):
