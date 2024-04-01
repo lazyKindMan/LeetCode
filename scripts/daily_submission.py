@@ -12,7 +12,7 @@ from daily_auto import write_question
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from lc_libs import check_user_exist, get_daily_question, check_accepted_submission, get_submission_detail, \
-    write_solution, get_user_study_plans, get_user_study_plan_progress, get_question_code
+    write_solution, get_user_study_plans, get_user_study_plan_progress, get_question_code, get_question_info
 from constants import constant
 from utils import get_default_folder
 
@@ -47,11 +47,15 @@ def main(problem_folder: str, user_slug: str, cookie: Optional[str], notify_key:
         root_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         for question_id, submits in submit_dict.items():
             dir_path = os.path.join(root_path, problem_folder, question_id)
-            if not os.path.exists(dir_path):
+            if question_id == daily_info["questionId"] and not os.path.exists(dir_path):
                 os.mkdir(dir_path)
                 write_question(dir_path, daily_info['questionId'], daily_info['questionNameEn'],
                                daily_info['questionSlug'])
             for submit_id, question_slug in submits:
+                if question_id != daily_info["questionId"] and not os.path.exists(dir_path):
+                    info = get_question_info(question_slug)
+                    os.mkdir(dir_path)
+                    write_question(dir_path, question_id, info["title"], question_slug)
                 try:
                     testcase_spec = spec_from_file_location("module.name", f"{dir_path}/testcase.py")
                     testcase = module_from_spec(testcase_spec)
@@ -111,8 +115,28 @@ def main(problem_folder: str, user_slug: str, cookie: Optional[str], notify_key:
                         f.write(full + write_solution(code, False))
                     break
                 elif detail:
-                    # TODO: implement other language
-                    print("Language {} is not implemented to save".format(detail["lang"]))
+                    code = detail["code"]
+                    match detail["lang"]:
+                        case "java":
+                            file_name = "solution.java"
+                        case "cpp":
+                            file_name = "solution.cpp"
+                        case "golang":
+                            file_name = "solution.go"
+                        case "c":
+                            file_name = "solution.c"
+                        case "javascript":
+                            file_name = "solution.js"
+                        case "typescript":
+                            file_name = "solution.ts"
+                        case _:
+                            file_name = "unknown"
+                            print("Language {} is not implemented to save".format(detail["lang"]))
+                    if not os.path.exists(f"{dir_path}/{file_name}"):
+                        with open(f"{dir_path}/{file_name}", "w", encoding="utf-8") as f:
+                            f.writelines(code)
+                    else:
+                        print("Already write [{}] code before".format(detail["lang"]))
         print("Daily Question {}: {}, Study plan problem solved today: {}"
               .format(daily_question, "DONE" if finish_daily else "TODO", finished_plan_questions))
         if not finish_daily:
