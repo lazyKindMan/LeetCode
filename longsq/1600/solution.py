@@ -9,24 +9,34 @@ class Solution(solution.Solution):
         obj = ThroneInheritance(*inputs[0])
         return [None] + [call_method(obj, op, *ipt) for op, ipt in zip(ops[1:], inputs[1:])]
 
+
 class ThroneInheritance:
 
     def __init__(self, kingName: str):
-        pass
-
+        self.edges = {kingName: list()}
+        self.dead = set()
+        self.kingName = kingName
 
     def birth(self, parentName: str, childName: str) -> None:
-            pass
-
+        if parentName not in self.edges:
+            return
+        self.edges[parentName].append(childName)
+        self.edges[childName] = list()
 
     def death(self, name: str) -> None:
-            pass
-
+        self.dead.add(name)
 
     def getInheritanceOrder(self) -> List[str]:
-        pass
+        ans = []
 
-
+        def dfs(parentName: str) -> None:
+            nonlocal ans
+            if parentName not in self.dead:
+                ans.append(parentName)
+            for child in self.edges[parentName]:
+                dfs(child)
+        dfs(self.kingName)
+        return ans
 
 # Your ThroneInheritance object will be instantiated and called as such:
 # obj = ThroneInheritance(kingName)
