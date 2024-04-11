@@ -3,11 +3,20 @@ import os
 import traceback
 from collections import defaultdict
 from importlib.util import spec_from_file_location, module_from_spec
-from typing import Union
 
 
 def write_problem_md(question_id: str, question_name: str, desc: str) -> str:
-    return "# {}. {}\n\n{}".format(question_id, question_name, desc)
+    check = False
+    formated = []
+    for line in desc.split("\n"):
+        if "<ul>" in line:
+            check = True
+        elif "</ul>" in line:
+            check = False
+        elif check and len(line) == 0:
+            continue
+        formated.append(line)
+    return "# {}. {}\n\n{}".format(question_id, question_name, "\n".join(formated))
 
 
 def write_testcase(testcases, outputs) -> str:
@@ -20,7 +29,7 @@ def write_testcase(testcases, outputs) -> str:
     res += '\t\tself.testcases = []\n'
     for inputs, output in zip(testcases, outputs):
         res += ('\t\tself.testcases.append(case(Input={}, Output={}))\n'
-                .format(f"\"{output}\"" if isinstance(inputs, str) else inputs,
+                .format(f"\"{inputs}\"" if isinstance(inputs, str) else inputs,
                         f"\"{output}\"" if isinstance(output, str) else output))
     res += '\n\tdef get_testcases(self):\n'
     res += '\t\treturn self.testcases\n'
@@ -89,24 +98,44 @@ def __process_code__(code: str):
 
     cs_map = defaultdict(list)
     for cs in your_classes:
+        class_name = cs[0]
         # Get the method of your class
         methods = inspect.getmembers(cs[1], inspect.isroutine)
 
+        # TODO: Fix issues like 382, the external class is called Solution
         # Filter out in-built dunder methods
         non_dunder_methods = [
             m for m in methods
-            if (cs[0] != 'Solution' and m[0] == "__init__") or not (m[0].startswith('__') and m[0].endswith('__'))]
+            if m[0] == "__init__" or not (m[0].startswith('__') and m[0].endswith('__'))]
 
         for method in non_dunder_methods:
             md = getattr(cs[1], method[0])
             sig = inspect.signature(md)
-            cs_map[cs[0]].append((method[0], dict(sig.parameters), sig.return_annotation))
+            if cs[0] == "Solution" and method[0] == "__init__":
+                d = dict(sig.parameters)
+                counts = len(d)
+                if "self" in d:
+                    counts -= 1
+                if "args" in d:
+                    counts -= 1
+                if "kwargs" in d:
+                    counts -= 1
+                if counts == 0:
+                    continue
+                if class_name in cs_map:
+                    cs_map["S"] = list(cs_map[class_name])
+                    cs_map.pop(class_name)
+                class_name = "S"
+                for i, line in enumerate(res):
+                    if "class Solution" in line:
+                        res[i] = line.replace("Solution", "S")
+            cs_map[class_name].append((method[0], dict(sig.parameters), sig.return_annotation))
 
     os.remove("tmp.py")
     return cs_map, top, res
 
 
-def __finalize_solution_code__(cs_map, top, res):
+def __finalize_solution_code__(cs_map, top, res, modify_in_place):
     process_input = "pass"
     if len(cs_map) == 1:
         if "Solution" in cs_map:
@@ -126,7 +155,10 @@ def __finalize_solution_code__(cs_map, top, res):
                     init_params = "test_input"
                 else:
                     init_params = ""
-                process_input = "return self.{}({})".format(methods[0][0], init_params)
+                if not modify_in_place:
+                    process_input = "return self.{}({})".format(methods[0][0], init_params)
+                else:
+                    process_input = "self.{}({})\n        return {}".format(methods[0][0], init_params, init_params)
         else:
             class_name, methods = "", []
             for k, v in cs_map.items():
@@ -210,14 +242,25 @@ def __finalize_solution_code__(cs_map, top, res):
 
                 if "TreeNode" in str(return_anno):
                     add_lib += ", tree_to_list" if exists else "from object_libs import tree_to_list"
-                    remain += "        res = self.{}({})\n        return tree_to_list(res)".format(methods[0][0],
-                                                                                                   inputs)
+                    if "List[" in str(return_anno):
+                        remain += ("        res = self.{}({})\n        return [tree_to_list(root) for root in res]"
+                                   .format(methods[0][0],inputs))
+                    else:
+                        remain += ("        res = self.{}({})\n        return tree_to_list(res)"
+                                   .format(methods[0][0],inputs))
                 elif "ListNode" in str(return_anno):
                     add_lib += ", linked_list_to_list" if exists else "from object_libs import linked_list_to_list"
-                    remain += "        res = self.{}({})\n        return linked_list_to_list(res)".format(methods[0][0],
-                                                                                                          inputs)
+                    if "List[" in str(return_anno):
+                        remain += ("res = self.{}({})\n        return [linked_list_to_list(head) for head in "
+                                   "res]").format(methods[0][0],inputs)
+                    else:
+                        remain += ("        res = self.{}({})\n        return linked_list_to_list(res)"
+                                   .format(methods[0][0],inputs))
                 else:
-                    remain += "        return self.{}({})".format(methods[0][0], inputs)
+                    if not modify_in_place:
+                        remain += "        return self.{}({})".format(methods[0][0], inputs)
+                    else:
+                        remain += "        self.{}({})\n        return {}".format(methods[0][0], inputs, inputs)
                 top[0] = top[0] + add_lib + "\n"
 
                 process_input += remain
@@ -227,7 +270,7 @@ def __finalize_solution_code__(cs_map, top, res):
                 top[0] += ", list_to_tree"
                 cs_map.pop("TreeNode")
             elif "ListNode" in cs_map:
-                top[0] += ", linked_list_to_list"
+                top[0] += ", list_to_linked_list"
                 cs_map.pop("ListNode")
             else:
                 # Too complex to fix here
@@ -256,26 +299,27 @@ def __finalize_solution_code__(cs_map, top, res):
                             par_map[v.name] = v.annotation
                             if is_first:
                                 is_first = False
+                                process_input += "        "
                             else:
                                 process_input += ", "
                                 inputs += ", "
                             if "TreeNode" in str(v.annotation):
                                 if "List[" in str(v.annotation):
-                                    process_input += "        nums_arr"
+                                    process_input += "nums_arr"
                                     remain += "        roots = [list_to_tree(nums) for nums in nums_arr]\n"
                                     inputs += "roots"
                                 else:
-                                    process_input += f"        nums{idx}"
+                                    process_input += f"nums{idx}"
                                     remain += f"        root{idx} = list_to_tree(nums{idx})\n"
                                     inputs += f"root{idx}"
                                     idx += 1
                             elif "ListNode" in str(v.annotation):
                                 if "List[" in str(v.annotation):
-                                    process_input += "        nums_arr"
+                                    process_input += "nums_arr"
                                     remain += f"        heads = [list_to_linked_list(nums) for nums in nums_arr]\n"
                                     inputs += "heads"
                                 else:
-                                    process_input += f"        nums{idx}"
+                                    process_input += f"nums{idx}"
                                     remain += f"        head{idx} = list_to_linked_list(nums{idx})\n"
                                     inputs += f"head{idx}"
                                     idx += 1
@@ -316,7 +360,7 @@ def write_solution(code: str, default: bool = True) -> str:
         return code
     try:
         cs_map, top, res = __process_code__(code)
-        top, res = __finalize_solution_code__(cs_map, top, res)
+        top, res = __finalize_solution_code__(cs_map, top, res, "Do not return anything" in code)
 
         return "\n".join(top) + "\n\n" + "\n".join(res)
     except Exception as e:

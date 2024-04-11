@@ -47,12 +47,12 @@ def main(problem_folder: str, user_slug: str, cookie: Optional[str], notify_key:
         root_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         for question_id, submits in submit_dict.items():
             dir_path = os.path.join(root_path, problem_folder, question_id)
-            if question_id == daily_info["questionId"] and not os.path.exists(dir_path):
+            if question_id == daily_question and not os.path.exists(dir_path):
                 os.mkdir(dir_path)
-                write_question(dir_path, daily_info['questionId'], daily_info['questionNameEn'],
+                write_question(dir_path, daily_question, daily_info['questionNameEn'],
                                daily_info['questionSlug'])
             for submit_id, question_slug in submits:
-                if question_id != daily_info["questionId"] and not os.path.exists(dir_path):
+                if question_id != daily_question and not os.path.exists(dir_path):
                     info = get_question_info(question_slug)
                     os.mkdir(dir_path)
                     write_question(dir_path, question_id, info["title"], question_slug)
@@ -71,14 +71,29 @@ def main(problem_folder: str, user_slug: str, cookie: Optional[str], notify_key:
                         result = solution_obj.solve(test_input=i)
                         print("Question: [{}]{}, Input: {}, Output: {}, Expected: {}"
                               .format(question_id, question_slug, i, result, o))
-                        if o and isinstance(o, list) and isinstance(o[0], float):
-                            if any(abs(a - b) > 0.00001 for a, b in zip(o, result)):
-                                raise ValueError
-                        elif o and isinstance(o, float):
-                            if abs(o - result) > 0.00001:
-                                raise ValueError
-                        elif result != o:
-                            raise ValueError
+                        if o is not None and result is None:
+                            raise ValueError("No solution")
+                        if o and isinstance(o, list):
+                            if o and isinstance(o, list) and isinstance(o[0], float):
+                                if any(abs(a - b) > 0.00001 for a, b in zip(o, result)):
+                                    raise ValueError("Mismatch float in list")
+                            elif all(x is not None for x in o) and isinstance(o[0], list) and not any(
+                                    None in x for x in o):
+                                if sorted(sorted(item) for item in o) != sorted(sorted(item) for item in result):
+                                    raise ValueError("List[List] not equal")
+                            else:
+                                if None not in o and not (isinstance(o[0], list) and any(None in x for x in o)):
+                                    if sorted(o) != sorted(result):
+                                        raise ValueError("List not equal")
+                                else:
+                                    if o != result:
+                                        raise ValueError("List Not equal")
+                        else:
+                            if isinstance(o, float):
+                                if abs(o - result) > 0.00001:
+                                    raise ValueError("Mismatch float")
+                            elif result != o:
+                                raise ValueError(f"Result {result} not as expected: {o}")
                     if question_id == daily_question:
                         finish_daily = True
                     if question_slug in plan_questions_slug:
@@ -113,6 +128,8 @@ def main(problem_folder: str, user_slug: str, cookie: Optional[str], notify_key:
                         full = "".join(lines[:idx + 1] + ["\n"])
                     with open(f"{dir_path}/solution.py", "w", encoding="utf-8") as f:
                         f.write(full + write_solution(code, False))
+                    if question_id == daily_question:
+                        finish_daily = True
                     break
                 elif detail:
                     code = detail["code"]
@@ -137,6 +154,8 @@ def main(problem_folder: str, user_slug: str, cookie: Optional[str], notify_key:
                             f.writelines(code)
                     else:
                         print("Already write [{}] code before".format(detail["lang"]))
+                    if question_id == daily_question:
+                        finish_daily = True
         print("Daily Question {}: {}, Study plan problem solved today: {}"
               .format(daily_question, "DONE" if finish_daily else "TODO", finished_plan_questions))
         if not finish_daily:
