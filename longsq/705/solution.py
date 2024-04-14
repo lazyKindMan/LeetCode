@@ -12,24 +12,22 @@ class Solution(solution.Solution):
 class MyHashSet:
 
     def __init__(self):
-        pass
-
+        self.base = 769
+        self.data = [list()] * self.base
 
     def add(self, key: int) -> None:
-            pass
-
+        hash_key = key % self.base
+        if key not in self.data[hash_key]:
+            self.data[hash_key].append(key)
 
     def remove(self, key: int) -> None:
-            pass
-
+        hash_key = key % self.base
+        data_list = self.data[hash_key]
+        if key not in data_list:
+            return
+        data_list.remove(key)
 
     def contains(self, key: int) -> bool:
-            pass
-
-
-
-# Your MyHashSet object will be instantiated and called as such:
-# obj = MyHashSet()
-# obj.add(key)
-# obj.remove(key)
-# param_3 = obj.contains(key)
+        hash_key = key % self.base
+        data_list = self.data[hash_key]
+        return False if key not in data_list else True
