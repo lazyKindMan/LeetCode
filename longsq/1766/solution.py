@@ -10,20 +10,16 @@ class Solution(solution.Solution):
         return self.getCoprimes(*test_input)
 
     def getCoprimes(self, nums: List[int], edges: List[List[int]]) -> List[int]:
-        n = len(nums)
-        graph = defaultdict(list)
-        ans = [-1] * n
-        for a, b in edges:
-            graph[a].append(b)
-        def dfs(root: int, parent_path: list) -> None:
-            for x in range(len(parent_path) - 1, -1, -1):
-                node, value = parent_path[x]
-                if gcd(nums[root], value) == 1:
-                    ans[root] = node
-                    break
-            if root in graph.keys():
-                parent_path.append((root, nums[root]))
-            for child in graph[root]:
-                dfs(child, parent_path)
-        dfs(0, list())
-        return ans
+        # todo: sovle it at Apr 13
+        gcds = defaultdict(set)
+        for i in range(1, 51):
+            gcds[i] = set()
+            for key in gcds.keys():
+                if key != i:
+                    value = gcds[key]
+                    if gcd(i, key) == 1:
+                        value.add(i)
+
+
+
+        print(gcds)
