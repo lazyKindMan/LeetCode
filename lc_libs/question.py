@@ -114,7 +114,7 @@ def extract_outputs_from_md(markdown_text: str) -> list:
     return res
 
 
-def get_question_code(slug: str, lang_slug: str = "python3", cookie: Optional[str] = None) -> Optional[str]:
+def get_question_code(slug: str, lang_slug: str = "go", cookie: Optional[str] = None) -> Optional[str]:
     try:
         result = requests.post("https://leetcode.cn/graphql",
                                json={

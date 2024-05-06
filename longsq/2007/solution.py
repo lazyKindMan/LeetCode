@@ -6,7 +6,7 @@ class Solution(solution.Solution):
     def solve(self, test_input=None):
         return self.findOriginalArray(test_input)
 
-     def findOriginalArray(self, changed: List[int]) -> List[int]:
+    def findOriginalArray(self, changed: List[int]) -> List[int]:
         n = len(changed)
         if n == 0 or n % 2 != 0:
             return []
@@ -27,3 +27,5 @@ class Solution(solution.Solution):
             if ans_len * 2 > n:
                 return []
         return ans
+
+
