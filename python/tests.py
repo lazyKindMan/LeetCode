@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from utils import get_default_folder, timeout
 
 # Question ID that wants to test, modify here as passing arguments
-QUESTIONS = [['228', 'longsq']]
+QUESTIONS = [['228', 'longsq'], ['530', 'longsq']]
 
 
 class Test(unittest.TestCase):
