@@ -7,37 +7,27 @@ import qubhjava.BaseSolution;
 
 
 public class Solution extends BaseSolution {
-    static Map<Integer, String> map = new HashMap<>();
-    static {
-        map.put(2, "abc");
-        map.put(3, "def");
-        map.put(4, "ghi");
-        map.put(5, "jkl");
-        map.put(6, "mno");
-        map.put(7, "pqrs");
-        map.put(8, "tuv");
-        map.put(9, "wxyz");
-    }
+    private static String[] mapping = new String[] {
+            "", "", "abc", "def", "ghi", "jkl", "mon", "pqrs", "tuv", "wxyz",
+    };
 
     public List<String> letterCombinations(String digits) {
-        List<String> res = new ArrayList<>();
-        if (digits.length() <= 0) return res;
-        combinationString(0, null, digits, res);
-        return res;
+        List<String> ans = new ArrayList<>();
+        int n = digits.length();
+        if (n <= 0) {
+            return ans;
+        }
+        dfs(0, n, "", digits, ans);
+        return ans;
     }
 
-    private void combinationString(int dept, StringBuilder sb, String digits, List<String> res) {
-        if (dept == digits.length()) {
-            res.add(sb == null ? "" : sb.toString());
+    private void dfs(int deep, int n, String current, String digits, List<String> res) {
+        if (deep == n) {
+            res.add(current);
             return;
         }
-        for (char c : map.get(digits.charAt(dept) - '0').toCharArray()) {
-            if (sb == null) {
-                combinationString(dept + 1, new StringBuilder().append(c), digits, res);
-            } else {
-                combinationString(dept + 1, sb.append(c), digits, res);
-                sb.deleteCharAt(dept);
-            }
+        for (char c : mapping[digits.charAt(deep) - '0'].toCharArray()) {
+            dfs(deep + 1,n, current + c, digits, res);
         }
     }
 
