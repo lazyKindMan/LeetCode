@@ -10,4 +10,4 @@ class Solution(solution.Solution):
         :type n: str
         :rtype: int
         """
-        return max([int(char) for char in n])
+        return max(map(int, n))
